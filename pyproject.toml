@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nengoplotlib"
+version = "0.1.0"
+description = "Plotting utilities for Nengo networks: connectomes, spike rasters, SOMs, traces, PSTHs, and animations."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [
+    { name = "Nicole Dumont", email = "nicole.s.dumont@gmail.com" },
+]
+keywords = ["nengo", "matplotlib", "plotting", "neuroscience", "spikes", "connectome"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Visualization",
+]
+dependencies = [
+    "numpy>=1.20",
+    "matplotlib>=3.5",
+    "scipy>=1.7",
+]
+
+[project.optional-dependencies]
+nengo = ["nengo>=3.0"]
+test = ["pytest>=7.0"]
+dev = [
+    "nengo>=3.0",
+    "pytest>=7.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/ctn-waterloo/nengoplotlib"
+Repository = "https://github.com/ctn-waterloo/nengoplotlib"
+
+[tool.setuptools.packages.find]
+include = ["nengoplotlib*"]
+exclude = ["tests*", "examples*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
