@@ -38,7 +38,7 @@ DPI = 150
 
 def save(fig, name):
     path = OUT / name
-    fig.savefig(path, dpi=DPI, bbox_inches="tight", transparent=True)
+    fig.savefig(path, dpi=DPI, bbox_inches="tight", transparent=False)
     plt.close(fig)
     print(f"  -> {path.relative_to(HERE.parent)}")
 
