@@ -260,24 +260,3 @@ The plot is built once on the first simulation step and cached on the
 node's output callable — every subsequent step serves the same SVG with no
 matplotlib re-render. Until that first step fires, a small placeholder is
 shown.
-
-## Package structure
-
-```
-connectomes/
-    tree.py         Node, build_tree, collapse_passthroughs
-    sizing.py       compute_sizes, by_n_neurons, by_n_descendants
-    layout.py       assign_angles, equalize
-    connections.py  Edge, extract_connections, aggregate_to_level, lca
-    draw.py         polar_to_cartesian, bezier_curve, draw_arc, draw_path
-    legend.py       build_hierarchical_legend
-    plot.py         _plot_connectome  (data-level orchestrator, internal)
-    api.py          plot_connectome   (model -> plot, the public entry)
-    correlation.py  plot_correlation, get_correlation_matrix
-    interactive.py  InteractiveConnectome
-    gui.py          ConnectomePlot   (Nengo GUI Node)
-    keys.py         get_key, display_label
-```
-
-Everything below `plot_connectome` is reachable as `connectomes.<module>`
-for callers that want to build their own pipelines.
