@@ -61,6 +61,13 @@ class SOM:
     pbc : bool
         Periodic boundary conditions on the grid.
     random_state : int or None
+    cell_centers : (n_cells, 2) array, optional
+        Explicit cell-centre coordinates. When given, the regular grid built
+        from ``grid_shape``/``topology`` is replaced by these centres (so the
+        map can fill an arbitrary, e.g. polygon-masked, footprint).
+        ``n_cells`` becomes ``len(cell_centers)`` and ``pbc`` is forced off,
+        since wrapping is undefined for an irregular layout. Neighbourhood
+        training is unchanged -- it operates on the centre coordinates.
     """
 
     def __init__(
@@ -75,27 +82,37 @@ class SOM:
         n_iter=1000,
         pbc=False,
         random_state=0,
+        cell_centers=None,
     ):
         if isinstance(grid_shape, int):
             grid_shape = (1, grid_shape)
         self.rows, self.cols = grid_shape
-        self.n_cells = self.rows * self.cols
         self.topology = topology
         self.metric = metric
-        self.sigma_start = sigma if sigma is not None else max(self.rows, self.cols) / 2.0
-        self.sigma_end = sigma_end
         self.lr_start = learning_rate
         self.lr_end = learning_rate_end
         self.n_iter = n_iter
-        self.pbc = pbc
         self.random_state = random_state
 
-        if topology == "hex":
-            self.cell_centers = _hex_offset_coords(self.rows, self.cols)
-        elif topology in ("rect", "line"):
-            self.cell_centers = _rect_coords(self.rows, self.cols)
+        if cell_centers is not None:
+            self.cell_centers = np.asarray(cell_centers, dtype=float)
+            self.pbc = False  # wrapping is undefined for an irregular layout
+            # Half the larger spatial extent of the custom layout.
+            span = self.cell_centers.max(axis=0) - self.cell_centers.min(axis=0)
+            default_sigma = max(float(span.max()), 1.0) / 2.0
         else:
-            raise ValueError(f"unknown topology {topology!r}")
+            self.pbc = pbc
+            if topology == "hex":
+                self.cell_centers = _hex_offset_coords(self.rows, self.cols)
+            elif topology in ("rect", "line"):
+                self.cell_centers = _rect_coords(self.rows, self.cols)
+            else:
+                raise ValueError(f"unknown topology {topology!r}")
+            default_sigma = max(self.rows, self.cols) / 2.0
+
+        self.n_cells = len(self.cell_centers)
+        self.sigma_start = sigma if sigma is not None else default_sigma
+        self.sigma_end = sigma_end
 
         self.weights = None  # (n_cells, n_features) after fit
 

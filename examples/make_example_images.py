@@ -332,6 +332,64 @@ def make_connectome():
     save(fig, "plot_connectome.png")
 
 
+def make_atlas_image():
+    """plot_on_atlas: the same per-region data, three fill styles.
+
+    Needs network access on first run (Allen atlas SVGs + ontology), then
+    everything is cached under ~/.cache/nengoplotlib/atlas.
+    """
+    print("plot_on_atlas (README image)")
+    rng = np.random.default_rng(0)
+    # VISp / VISpm carry per-neuron arrays; the rest are scalar context. All
+    # are present in the posterior coronal section ~402.
+    data = {
+        "VISp": rng.random(220),
+        "VISpm": rng.random(120),
+        "VISpl": 0.55,
+        "RSPv": 0.2,
+        "RSPd": 0.8,
+    }
+    fills = [("pcolormesh", "grid"), ("som_hex", "SOM (hex)"), ("voronoi", "Voronoi")]
+    fig, axes = plt.subplots(1, 3, figsize=(13, 4.4))
+    for ax, (fill, title) in zip(axes, fills):
+        npl.plot_on_atlas(
+            "Mouse, P56, Coronal", data, section=402, cmap=ACTIVITY_CMAP,
+            vmin=0.0, vmax=1.0, array_fill_type=fill, edgecolor=FG_COLOR,
+            colorbar=False, ax=ax, random_state=0,
+        )
+        ax.set_title(title)
+
+    save(fig, "plot_on_atlas.png")
+
+
+def make_atlas_animation():
+    """plot_atlas_animation: time-varying per-region activity -> GIF.
+
+    A traveling bump sweeps across VISp's neurons (a Voronoi mosaic) while
+    neighbouring areas pulse as scalar fills. Needs network access on first run.
+    """
+    print("plot_atlas_animation (README gif)")
+    T, n = 48, 160
+    sweep = np.linspace(0, 4 * np.pi, T)[:, None]
+    phase = np.linspace(0, 2 * np.pi, n)[None, :]
+    data = {
+        "VISp": 0.5 + 0.5 * np.sin(sweep - phase),       # (T, n) traveling bump
+        "VISpm": 0.5 + 0.5 * np.sin(sweep[:, 0] + 1.0),  # scalar pulses
+        "RSPv": 0.5 + 0.5 * np.cos(sweep[:, 0]),
+        "RSPd": 0.5 + 0.5 * np.sin(sweep[:, 0] + 2.0),
+    }
+    ani = npl.plot_atlas_animation(
+        "Mouse, P56, Coronal", data, section=402,
+        array_fill_type="voronoi", cmap=ACTIVITY_CMAP, edgecolor=FG_COLOR,
+        vmin=0.0, vmax=1.0, cbar_label="activity",
+        interval=80, figsize=(5, 4.2), random_state=0,
+    )
+    path = OUT / "plot_atlas_animation.gif"
+    ani.save(path, writer="pillow", fps=14, dpi=90)
+    plt.close("all")
+    print(f"  -> {path.relative_to(HERE.parent)}")
+
+
 # ---------------------------------------------------------------- main
 
 
@@ -354,6 +412,11 @@ def main():
     make_isi(spikes_osc)
     make_weight_matrix()
     make_connectome()
+    try:  # the only figures needing network access
+        make_atlas_image()
+        make_atlas_animation()
+    except Exception as exc:
+        print(f"  !! skipped atlas figures (needs network access): {exc}")
     print("done.")
 
 

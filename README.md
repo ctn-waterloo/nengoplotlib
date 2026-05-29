@@ -6,8 +6,8 @@
 # nengoplotlib
 
 Plotting utilities for [Nengo](https://www.nengo.ai) networks: connectome
-diagrams, spike rasters, activity heatmaps, multi-trial
-PSTHs, and animations. Pure matplotlib output.
+diagrams, spike rasters, activity heatmaps, multi-trial PSTHs, animations, and
+brain-atlas region maps. Pure matplotlib output.
 
 ## Installation
 
@@ -222,6 +222,72 @@ for the full API, including sizing options, hierarchical edge bundling, the
 correlation helper (`get_correlation_matrix`), the interactive click handler,
 and the Nengo GUI integration.
 
+### `plot_on_atlas` — per-region data on a brain atlas
+
+Map data onto Allen Mouse Brain Atlas regions. Why? Sometimes researchers build nengo model's with populations that roughly map onto partiaulr brain areas and its fun to visualize the model activity on a brain map. Don't take these plots too seriously. 
+
+Pass an atlas name (or id) and a dict keyed by region acronym or full name (`"VISp"` or `"Primary visual area"`).
+A **scalar** value fills the region with a solid colour; a `(n_neurons,)`
+**array** is laid out *inside the region outline* — as a `pcolormesh` grid, or,
+reusing `nengoplotlib.sorting`, a shape-constrained **SOM** (`"som_hex"` /
+`"som_rect"`) or **Voronoi** mosaic (`"voronoi"` / `"voronoi_kmeans"`). A value
+on a coarse region (e.g. `"Isocortex"`) propagates to its drawn subregions.
+
+```python
+import numpy as np
+import nengoplotlib as npl
+
+data = {
+    "VISp":  np.random.rand(220),   # (n_neurons,) -> laid out inside the region
+    "VISpm": np.random.rand(120),
+    "RSPv":  0.2,                   # scalar -> solid fill
+    "RSPd":  0.8,
+}
+npl.plot_on_atlas("Mouse, P56, Coronal", data, section=402,
+                  array_fill_type="voronoi")
+```
+
+![plot_on_atlas](examples/_images/plot_on_atlas.png)
+
+Choose any annotated `section` (or pass `swanson=True` for the whole-brain flat
+projection, scalar fills). The neuron layout is driven by optional
+`features=`/`positions=` dicts, defaulting to the plotted values. Atlas geometry
+(per-section SVGs, the structure ontology, and the Swanson polygons) is
+downloaded from the Allen / IBL public APIs on first use and cached under
+`~/.cache/nengoplotlib/atlas` (override with `NENGOPLOTLIB_CACHE_DIR`), so
+re-runs work offline. See [`examples/plot_on_atlas_demo.py`](examples/plot_on_atlas_demo.py).
+
+### `plot_atlas_animation` — per-region activity over time
+
+The temporal counterpart of `plot_on_atlas`: each region's value is now a time
+series — `(n_timesteps,)` for a scalar fill that pulses, or
+`(n_timesteps, n_neurons)` for a per-neuron layout (grid / SOM / Voronoi) whose
+cells recolour every frame. The geometry is built once and only the colours
+update, so a frame matches the equivalent `plot_on_atlas`. Returns a
+`matplotlib.animation.FuncAnimation`.
+
+```python
+import numpy as np
+import nengoplotlib as npl
+
+T, n = 48, 160
+sweep = np.linspace(0, 4 * np.pi, T)[:, None]
+phase = np.linspace(0, 2 * np.pi, n)[None, :]
+data = {
+    "VISp":  0.5 + 0.5 * np.sin(sweep - phase),       # (T, n) traveling bump
+    "RSPv":  0.5 + 0.5 * np.cos(sweep[:, 0]),         # (T,) scalar pulse
+    "RSPd":  0.5 + 0.5 * np.sin(sweep[:, 0] + 2.0),
+}
+ani = npl.plot_atlas_animation("Mouse, P56, Coronal", data, section=402,
+                               array_fill_type="voronoi", tau=0.0)
+ani.save("atlas.gif", writer="pillow", fps=14)
+```
+
+![plot_atlas_animation](examples/_images/plot_atlas_animation.gif)
+
+Pass `t=`/`dt=` and a synapse `tau=` to lowpass-filter spike-like activity
+before display, and `plot_step=` to advance several timesteps per frame.
+
 ---
 
 ## Neuron sorting
@@ -271,10 +337,10 @@ their own pipeline: `sort_cluster`, `sort_som`, `voronoi_parcellation`,
 pip install -e .
 ```
 
-Required: `numpy`, `scipy`, `matplotlib`. `nengo` is needed for the
-connectome subpackage and the example script. `pillow` (or `ffmpeg`) is
-needed to save animations. Voronoi parcellations require `shapely` and
-`scikit-learn`.
+Required: `numpy`, `scipy`, `matplotlib`, `shapely`, `scikit-learn` (the last
+two power the Voronoi parcellations and atlas neuron-layout fills). `nengo` is
+needed for the connectome subpackage and the example script. `pillow` (or
+`ffmpeg`) is needed to save animations.
 
 ## Tests
 

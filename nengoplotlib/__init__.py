@@ -3,6 +3,7 @@
 Subpackages and modules
 -----------------------
 
+    atlas         plot_on_atlas (fill brain regions on an Allen atlas).
     connectomes   Circular ring-plots of nengo.Network hierarchies.
     sorting       Neuron / spike sorting (1D and 2D, cluster or SOM) and merging.
     raster        plot_spikes (alpha-channel grayscale raster).
@@ -31,6 +32,7 @@ except ImportError:  # nengo not installed -- connectome plots unavailable
     plot_connectome = None
     plot_correlation = None
 
+from .atlas import plot_atlas_animation, plot_on_atlas
 from .heatmap import plot_heatmap
 from .isi import plot_isi
 from .phase_portrait import plot_phase_portrait
@@ -67,6 +69,9 @@ __all__ = [
     "plot_phase_portrait",
     "plot_isi",
     "plot_weight_matrix",
+    # atlas
+    "plot_on_atlas",
+    "plot_atlas_animation",
     # connectomes
     "plot_connectome",
     "plot_correlation",

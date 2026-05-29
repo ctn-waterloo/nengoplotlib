@@ -45,12 +45,11 @@ def apply_style():
     })
 
 
-def activity_cmap(base="magma", lo=0.02, hi=0.92, n=256):
-    """Perceptually uniform colormap, trimmed at the very-light end so the
-    brightest cells still pop against a warm cream background."""
+def activity_cmap(base="inferno", lo=0.02, hi=0.92, n=256):
     cmap = plt.get_cmap(base)
-    colors = cmap(np.linspace(lo, hi, n))
-    return mcolors.LinearSegmentedColormap.from_list(f"{base}_trim", colors)
+    return cmap
+    # colors = cmap(np.linspace(lo, hi, n))
+    # return mcolors.LinearSegmentedColormap.from_list(f"{base}_trim", colors)
 
 
 

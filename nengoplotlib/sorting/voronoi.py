@@ -411,6 +411,8 @@ def voronoi_parcellation(
     flat_cap_factor=0.7,
     disk_factor=None,
     smooth_eps_factor=0.8,
+    clip_shape=None,
+    bbox=None,
 ):
     """Per-neuron Voronoi parcellation of points in a 2D layout.
 
@@ -441,6 +443,15 @@ def voronoi_parcellation(
     smooth_eps_factor : float
         Corner-smoothing for the alpha hull, in units of d_nn. Set to 0 to
         disable. Only applied when ``outer='alpha'``.
+    clip_shape : shapely Polygon/MultiPolygon, optional
+        Explicit outer boundary to clip every cell to. When given, the
+        ``outer``/alpha/flat machinery is bypassed entirely -- the cells
+        tile this shape exactly. Used to confine a parcellation to an
+        externally-supplied region (e.g. a brain-area outline).
+    bbox : (xmin, xmax, ymin, ymax), optional
+        Bounding box for the Voronoi construction. Defaults to the tight
+        box of *positions*; pass the *clip_shape* bounds when generators do
+        not reach the shape's edges so border cells still fill it.
 
     Returns
     -------
@@ -449,12 +460,14 @@ def voronoi_parcellation(
     if outer not in ("alpha", "flat"):
         raise ValueError(f"outer must be 'alpha' or 'flat', got {outer!r}")
     positions = np.asarray(positions, dtype=float)
-    bbox = bbox_of(positions)
+    if bbox is None:
+        bbox = bbox_of(positions)
     d_nn = median_nn_distance(positions)
-    clip_shape = None
     flat_caps = False
     flat_cap_distance = None
-    if outer == "alpha":
+    if clip_shape is not None:
+        pass  # explicit boundary: skip alpha/flat
+    elif outer == "alpha":
         alpha = 1.0 / (alpha_factor * d_nn)
         smooth_eps = smooth_eps_factor * d_nn if smooth_eps_factor else None
         clip_shape = alpha_shape_polygon(
@@ -492,6 +505,8 @@ def kmeans_voronoi_parcellation(
     disk_factor=None,
     smooth_eps_factor=0.8,
     random_state=0,
+    clip_shape=None,
+    bbox=None,
 ):
     """Cluster points in 2D with k-means, then Voronoi over centroids.
 
@@ -504,6 +519,11 @@ def kmeans_voronoi_parcellation(
         d_nn (so it tracks the underlying cloud, not the centroid lattice);
         ``flat_cap_factor`` and ``disk_factor`` use the inter-centroid d_nn.
     random_state : int
+    clip_shape : shapely Polygon/MultiPolygon, optional
+        Explicit outer boundary to clip cluster cells to; bypasses the
+        ``outer``/alpha/flat machinery. See :func:`voronoi_parcellation`.
+    bbox : (xmin, xmax, ymin, ymax), optional
+        Voronoi construction box; defaults to the tight box of *positions*.
 
     Returns
     -------
@@ -523,13 +543,15 @@ def kmeans_voronoi_parcellation(
     labels = km.labels_
     centroids = km.cluster_centers_
 
-    bbox = bbox_of(positions)
+    if bbox is None:
+        bbox = bbox_of(positions)
     d_nn_points = median_nn_distance(positions)
     d_nn_centroids = median_nn_distance(centroids)
-    clip_shape = None
     flat_caps = False
     flat_cap_distance = None
-    if outer == "alpha":
+    if clip_shape is not None:
+        pass  # explicit boundary: skip alpha/flat
+    elif outer == "alpha":
         alpha = 1.0 / (alpha_factor * d_nn_points)
         smooth_eps = (smooth_eps_factor * d_nn_points
                       if smooth_eps_factor else None)

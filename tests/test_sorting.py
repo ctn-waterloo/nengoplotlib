@@ -313,3 +313,39 @@ def test_neuronsorter_voronoi_requires_positions():
 def test_neuronsorter_voronoi_kmeans_requires_n_clusters():
     with pytest.raises(ValueError, match="n_clusters"):
         NeuronSorter(method="voronoi_kmeans")
+
+
+# ------------------------------------------------- shape-constrained extras
+
+
+def test_som_accepts_custom_cell_centers():
+    """A SOM built from explicit (irregular) cell centres trains and assigns."""
+    rng = np.random.default_rng(0)
+    centers = rng.random((25, 2)) * 10
+    feats = rng.standard_normal((40, 4))
+    som = SOM(grid_shape=(1, len(centers)), cell_centers=centers,
+              n_iter=200, random_state=0).fit(feats)
+    assert som.n_cells == 25
+    assert som.weights.shape == (25, 4)
+    assert som.pbc is False  # forced off for irregular layouts
+    assign = som.cell_assignments(feats)
+    assert assign.shape == (40,) and assign.max() < 25
+
+
+def test_voronoi_parcellation_honors_clip_shape():
+    """Cells are confined to an explicit clip_shape (a square), bypassing alpha."""
+    from shapely.geometry import Polygon as ShPoly
+    from nengoplotlib.sorting.voronoi import voronoi_parcellation
+
+    rng = np.random.default_rng(0)
+    square = ShPoly([(0, 0), (10, 0), (10, 10), (0, 10)])
+    pos = rng.random((30, 2)) * 10
+    parc = voronoi_parcellation(pos, clip_shape=square,
+                                bbox=(0, 10, 0, 10))
+    # every produced cell must lie within the square (allowing tiny fp slack)
+    for patch in parc.patches:
+        if patch is None:
+            continue
+        xy = patch.get_xy()
+        assert xy[:, 0].min() >= -1e-6 and xy[:, 0].max() <= 10 + 1e-6
+        assert xy[:, 1].min() >= -1e-6 and xy[:, 1].max() <= 10 + 1e-6
