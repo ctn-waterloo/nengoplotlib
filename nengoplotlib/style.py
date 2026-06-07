@@ -20,9 +20,16 @@ from __future__ import annotations
 from typing import Sequence
 
 import matplotlib.colors as mcolors
+import matplotlib.font_manager as fm
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 import numpy as np
+
+
+def _installed_families(candidates: list[str]) -> list[str]:
+    available = {f.name for f in fm.fontManager.ttflist}
+    found = [f for f in candidates if f in available]
+    return found if found else ["DejaVu Sans"]
 
 BG_COLOR = "#ffffff"
 FG_COLOR = "#2a2422"
@@ -32,9 +39,9 @@ RULE_COLOR = "#ffffff"
 
 def apply_style():
     """Apply the nengoplotlib rcParams (font stack, axes colors)."""
+    _preferred = ["Inter", "Helvetica Neue", "Helvetica", "Arial", "DejaVu Sans"]
     plt.rcParams.update({
-        "font.family": ["Inter", "Helvetica Neue", "Helvetica", "Arial",
-                        "DejaVu Sans"],
+        "font.family": _installed_families(_preferred),
         "axes.labelcolor": FG_COLOR,
         "axes.edgecolor": FG_COLOR,
         "xtick.color": FG_COLOR,
