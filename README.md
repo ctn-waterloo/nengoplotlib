@@ -32,6 +32,12 @@ For development (tests + nengo):
 pip install -e ".[dev]"
 ```
 
+To allow for interactive plots within the Jupyter notebooks in /examples:
+
+```bash
+pip install -e ".[intplots]"
+```
+
 ```python
 import nengoplotlib as npl
 ```
