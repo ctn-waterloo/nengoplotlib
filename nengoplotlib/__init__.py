@@ -56,7 +56,7 @@ from .sorting import (
     voronoi_parcellation,
 )
 from .traces import plot_traces
-from . import style
+from .colorbar import colorbar
 
 __all__ = [
     # plots
@@ -93,6 +93,6 @@ __all__ = [
     "sample_by_variance",
     "sample_by_activity",
     "sample_random",
-    # style helpers
-    "style",
+    # colorbar
+    "colorbar",
 ]
