@@ -201,6 +201,7 @@ def make_grid_animation(t, spikes, ens, sim):
     ani.save(path, writer="pillow", fps=15, dpi=DPI,
              savefig_kwargs={"transparent": True, "facecolor": "none"})
     plt.close("all")
+    
     print(f"  -> {path.relative_to(HERE.parent)}")
 
 
