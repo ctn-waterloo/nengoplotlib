@@ -7,11 +7,20 @@
 
 Plotting utilities for [Nengo](https://www.nengo.ai) networks: connectome
 diagrams, spike rasters, activity heatmaps, multi-trial PSTHs, animations, and
-brain-atlas region maps. Pure matplotlib output.
+brain-atlas region maps. 
 
 ## Installation
 
-Install from a local clone:
+Install directly from GitHub:
+
+```bash
+pip install git+https://github.com/ctn-waterloo/nengoplotlib.git
+```
+
+The extras below also work with this form, e.g.
+`pip install "nengoplotlib[nengo] @ git+https://github.com/ctn-waterloo/nengoplotlib.git"`.
+
+Or install from a local clone:
 
 ```bash
 git clone https://github.com/ctn-waterloo/nengoplotlib.git
@@ -41,6 +50,11 @@ pip install ".[intdemos,nengo]"
 ```python
 import nengoplotlib as npl
 ```
+
+Required: `numpy`, `scipy`, `matplotlib`, `shapely`, `scikit-learn` (the last
+two power the Voronoi parcellations and atlas neuron-layout fills). `nengo` is
+needed for the connectome subpackage and the example script. `pillow` (or
+`ffmpeg`) is needed to save animations.
 
 To regenerate every figure on this page, run
 [`examples/make_example_images.py`](examples/make_example_images.py).
@@ -230,8 +244,7 @@ and the Nengo GUI integration.
 
 ### `plot_on_atlas` — per-region data on a brain atlas
 
-Map data onto Allen Mouse Brain Atlas regions. Why? Sometimes researchers build nengo model's with populations that roughly map onto partiaulr brain areas and its fun to visualize the model activity on a brain map. Don't take these plots too seriously. 
-
+Map data onto Allen Mouse Brain Atlas regions.  
 Pass an atlas name (or id) and a dict keyed by region acronym or full name (`"VISp"` or `"Primary visual area"`).
 A **scalar** value fills the region with a solid colour; a `(n_neurons,)`
 **array** is laid out *inside the region outline* — as a `pcolormesh` grid, or,
@@ -336,17 +349,6 @@ their own pipeline: `sort_cluster`, `sort_som`, `voronoi_parcellation`,
 `sample_by_variance`, `sample_by_activity`, `sample_random`, `smooth`.
 
 ---
-
-## Installation
-
-```bash
-pip install -e .
-```
-
-Required: `numpy`, `scipy`, `matplotlib`, `shapely`, `scikit-learn` (the last
-two power the Voronoi parcellations and atlas neuron-layout fills). `nengo` is
-needed for the connectome subpackage and the example script. `pillow` (or
-`ffmpeg`) is needed to save animations.
 
 ## Tests
 
