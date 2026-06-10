@@ -32,6 +32,12 @@ For development (tests + nengo):
 pip install -e ".[dev]"
 ```
 
+For the interactive demos in the Jupyter notebooks in /examples:
+
+```bash
+pip install ".[intdemos,nengo]"
+```
+
 ```python
 import nengoplotlib as npl
 ```

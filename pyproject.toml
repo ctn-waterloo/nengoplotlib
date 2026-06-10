@@ -40,6 +40,10 @@ dev = [
     "nengo>=3.0",
     "pytest>=7.0",
 ]
+intdemos = [
+    "ipympl>=0.9.5",
+    "nengo-learning-display @ git+https://github.com/tcstewar/nengo_learning_display"
+    ]
 
 [project.urls]
 Homepage = "https://github.com/ctn-waterloo/nengoplotlib"
