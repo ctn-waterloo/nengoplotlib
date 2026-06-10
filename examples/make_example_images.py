@@ -20,20 +20,14 @@ import numpy as np
 import nengo
 
 import nengoplotlib as npl
-from nengoplotlib.style import (
-    EDGE_COLOR, FG_COLOR,
-    activity_cmap, add_thin_colorbar, apply_style, style_legend,
-    title_block,
-)
 
-apply_style()
-ACTIVITY_CMAP = activity_cmap()
+ACTIVITY_CMAP = plt.get_cmap("inferno")
 
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE / "_images"
 OUT.mkdir(exist_ok=True)
-DPI = 150
+DPI = 300
 
 
 def save(fig, name):
@@ -59,11 +53,13 @@ def simulate_oscillator(seed=1, n_neurons=500, t_run=5.0):
 
 def simulate_sparse(seed=1, n_neurons=500, t_run=3.0):
     with nengo.Network(seed=seed) as model:
-        inp = nengo.Node(lambda t: np.sin(10 * t))
+        # inp = nengo.Node(lambda t: np.sin(10 * t))
+        inp = nengo.Node(nengo.processes.WhiteSignal(t_run, high=10, seed=0))
         ens = nengo.Ensemble(
             n_neurons, 1,
-            max_rates=nengo.dists.Uniform(10, 20),
-            intercepts=nengo.dists.Uniform(0.5, 0.99),
+            max_rates=nengo.dists.Uniform(20, 30),
+            intercepts=nengo.dists.Uniform(0.2, 0.9),
+            noise=nengo.processes.WhiteNoise(dist=nengo.dists.Gaussian(0, 0.005))
         )
         nengo.Connection(inp, ens, synapse=0.05)
         p_spikes = nengo.Probe(ens.neurons, synapse=None)
@@ -140,17 +136,19 @@ def make_plot_heatmap(t, spikes):
     mesh = npl.plot_heatmap(t, filtered, cmap=ACTIVITY_CMAP, ax=ax)
     ax.set_xlabel("Time [s]")
     ax.set_ylabel("Neuron #")
-    add_thin_colorbar(fig, ax, mesh, filtered.ravel(), label="activity")
+    npl.colorbar(fig, ax, mesh, filtered.ravel(), label="activity")
     save(fig, "plot_heatmap.png")
 
 
 def make_plot_traces():
     print("plot_traces")
-    t, spikes = simulate_sparse()
+    t, spikes = simulate_sparse(t_run=10)
     sub = spikes[:, ::10]
-    filtered = npl.smooth(sub, t=t, filter_width=0.1)
+    filtered = npl.smooth(sub, t=t, filter_width=0.05)
     fig, ax = plt.subplots(figsize=(5, 3))
-    npl.plot_traces(t, filtered[:, :40], offset=0.6, cmap="tab10", ax=ax)
+    filtered, _ = npl.sort_neurons(filtered, t=t, method="cluster")
+
+    npl.plot_traces(t, filtered, offset=0.4, cmap="tab10", ax=ax)
     ax.set_xlabel("Time [s]")
     ax.set_ylabel("Neuron #")
     save(fig, "plot_traces.png")
@@ -174,12 +172,13 @@ def make_plot_psth(t, trials):
 
 def make_scrolling_raster(t, spikes):
     print("plot_scrolling_raster")
-    sorted_X, _ = npl.sort_neurons(spikes, t=t, method="cluster", n_out=80, smoothing=0.002)
+    sorted_X, _ = npl.sort_neurons(spikes, t=t, 
+                                   method="cluster", n_out=80, smoothing=0.002)
     ani = npl.plot_scrolling_raster(
         t, sorted_X, plot_step=50, window=1.0, tau=0.01, interval=80,
     )
     path = OUT / "plot_scrolling_raster.gif"
-    ani.save(path, writer="pillow", fps=15, dpi=100)
+    ani.save(path, writer="pillow", fps=15, dpi=DPI)
     plt.close("all")
     print(f"  -> {path.relative_to(HERE.parent)}")
 
@@ -199,10 +198,28 @@ def make_grid_animation(t, spikes, ens, sim):
         plot_step=50, tau=0.02, cmap=ACTIVITY_CMAP, interval=80,
     )
     path = OUT / "plot_grid_animation.gif"
-    ani.save(path, writer="pillow", fps=15, dpi=100,
+    ani.save(path, writer="pillow", fps=15, dpi=DPI,
              savefig_kwargs={"transparent": True, "facecolor": "none"})
     plt.close("all")
+    
     print(f"  -> {path.relative_to(HERE.parent)}")
+
+
+    sub_spikes = spikes[:, sub_idx]
+    features = sim.data[ens].encoders
+    sorter = npl.NeuronSorter(
+        method="som", ndim=2, grid="hex",
+        grid_shape=(15, 15), metric="cosine",
+        n_iter=2000, smoothing=None, random_state=0,
+    ).fit(spikes, features=sim.data[ens].encoders)
+    ani = npl.plot_grid_animation(
+        t, spikes, sorter=sorter,
+        plot_step=50, tau=0.02, cmap=ACTIVITY_CMAP, interval=80,
+    )
+    path = OUT / "plot_grid_animation.gif"
+    ani.save(path, writer="pillow", fps=15, dpi=DPI,
+             savefig_kwargs={"transparent": True, "facecolor": "none"})
+    plt.close("all")
 
 
 def simulate_disk_ensemble(seed=1, n_neurons=600, dims=6, t_run=4.0):
@@ -238,7 +255,8 @@ def make_voronoi_parcellation_image():
     # sorter = npl.NeuronSorter(
     #     method="voronoi_kmeans", n_clusters=36, outer="flat",
     # ).fit(spikes, positions_2d=positions)
-    sorter = npl.NeuronSorter(method='voronoi').fit(spikes, positions_2d=positions)
+    sorter = npl.NeuronSorter(method='voronoi').fit(spikes,
+                                 positions_2d=positions)
     merged = sorter.transform(spikes)
     cluster_activity = merged.mean(axis=0)
 
@@ -253,10 +271,10 @@ def make_voronoi_parcellation_image():
     patches = [p for p, _ in valid]
     colors = np.array([a for _, a in valid])
     pc = PatchCollection(patches, cmap=ACTIVITY_CMAP,
-                         edgecolor=EDGE_COLOR, linewidth=1.0)
+                         edgecolor="#ffffff", linewidth=1.0)
     pc.set_array(colors)
     ax.add_collection(pc)
-    add_thin_colorbar(fig, ax, pc, colors, label="mean firing rate")
+    npl.colorbar(fig, ax, pc, colors, label="mean firing rate")
     save(fig, "plot_voronoi_parcellation.png")
 
 
@@ -268,15 +286,15 @@ def make_voronoi_grid_animation_disk():
     # sorter = npl.NeuronSorter(
     #     method="voronoi_kmeans", n_clusters=36, outer="flat",
     # ).fit(spikes, positions_2d=positions)
-    sorter = npl.NeuronSorter(method='voronoi').fit(spikes, positions_2d=positions)
-
+    sorter = npl.NeuronSorter(method='voronoi').fit(spikes,
+                                   positions_2d=positions)
     ani = npl.plot_grid_animation(
         t, spikes, sorter=sorter,
         plot_step=50, tau=0.05, cmap=ACTIVITY_CMAP, interval=80,
         figsize=(4.5, 4.5),
     )
     path = OUT / "plot_voronoi_grid_animation.gif"
-    ani.save(path, writer="pillow", fps=15, dpi=100,
+    ani.save(path, writer="pillow", fps=15, dpi=DPI,
              savefig_kwargs={"transparent": True, "facecolor": "none"})
     plt.close("all")
     print(f"  -> {path.relative_to(HERE.parent)}")
@@ -332,6 +350,7 @@ def make_connectome():
     save(fig, "plot_connectome.png")
 
 
+
 def make_atlas_image():
     """plot_on_atlas: the same per-region data, three fill styles.
 
@@ -354,7 +373,7 @@ def make_atlas_image():
     for ax, (fill, title) in zip(axes, fills):
         npl.plot_on_atlas(
             "Mouse, P56, Coronal", data, section=402, cmap=ACTIVITY_CMAP,
-            vmin=0.0, vmax=1.0, array_fill_type=fill, edgecolor=FG_COLOR,
+            vmin=0.0, vmax=1.0, array_fill_type=fill, edgecolor="#2a2422",
             colorbar=False, ax=ax, random_state=0,
         )
         ax.set_title(title)
@@ -380,12 +399,12 @@ def make_atlas_animation():
     }
     ani = npl.plot_atlas_animation(
         "Mouse, P56, Coronal", data, section=402,
-        array_fill_type="voronoi", cmap=ACTIVITY_CMAP, edgecolor=FG_COLOR,
+        array_fill_type="voronoi", cmap=ACTIVITY_CMAP, edgecolor="#2a2422",
         vmin=0.0, vmax=1.0, cbar_label="activity",
         interval=80, figsize=(5, 4.2), random_state=0,
     )
     path = OUT / "plot_atlas_animation.gif"
-    ani.save(path, writer="pillow", fps=14, dpi=90)
+    ani.save(path, writer="pillow", fps=14, dpi=DPI)
     plt.close("all")
     print(f"  -> {path.relative_to(HERE.parent)}")
 
